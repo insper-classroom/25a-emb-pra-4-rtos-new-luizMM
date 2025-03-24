@@ -23,9 +23,6 @@ const uint LED_3_OLED = 22;
 const uint ECHO_PIN = 7;
 const uint TRIG_PIN = 6;
 
-volatile int time_end = 0;
-volatile int time_start = 0;
-
 QueueHandle_t xQueueDistance;
 QueueHandle_t xQueueTime;
 SemaphoreHandle_t xSemaphoreTrigger;
