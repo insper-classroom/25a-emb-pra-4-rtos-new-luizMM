@@ -50,9 +50,9 @@ void trigger_task(void *p){
         xSemaphoreTake(xSemaphoreTrigger, pdMS_TO_TICKS(200));
 
         gpio_put(TRIG_PIN, 1);
-        vTaskDelay(pdMS_TO_TICKS(1));
+        sleep_us(10);
         gpio_put(TRIG_PIN, 0);
-        vTaskDelay(pdMS_TO_TICKS(1));
+        
         
         vTaskDelay(pdMS_TO_TICKS(100));
     }
@@ -64,11 +64,10 @@ void echo_task(void *p){
     gpio_set_irq_enabled_with_callback(ECHO_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &pin_callback);
 
     int dif = 0;
-    float distance = 0;
 
     while (true){
         if (xQueueReceive(xQueueTime, &dif, pdMS_TO_TICKS(100))){
-            distance = (dif * 0.0343)/ 2;
+            float distance = (dif * 0.0343)/ 2;
 
             if (distance > 400 || distance < 2){
                 distance = -1;
