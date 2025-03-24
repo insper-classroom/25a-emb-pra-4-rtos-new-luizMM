@@ -31,14 +31,13 @@ QueueHandle_t xQueueTime;
 SemaphoreHandle_t xSemaphoreTrigger;
 
 void pin_callback(uint gpio, uint32_t events){
+    int time;
     if (events == 0x8) {
-        time_start = to_us_since_boot(get_absolute_time());
+        time = to_us_since_boot(get_absolute_time());
+        xQueueSendFromISR(xQueueTime, &time, NULL);
     } else if (events == 0x4) {
-        time_end = to_us_since_boot(get_absolute_time());
-        if (time_end > time_start){
-            int duration = time_end - time_start;
-            xQueueSendFromISR(xQueueTime, &duration, NULL);
-        }
+        time = to_us_since_boot(get_absolute_time());
+        xQueueSendFromISR(xQueueTime, &time, NULL);
     }
 }
 
@@ -63,17 +62,23 @@ void echo_task(void *p){
     gpio_set_dir(ECHO_PIN, GPIO_IN);
     gpio_set_irq_enabled_with_callback(ECHO_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &pin_callback);
 
-    int dif = 0;
+    int time_start = 0;
+    int time_end = 0;
 
     while (true){
-        if (xQueueReceive(xQueueTime, &dif, pdMS_TO_TICKS(100))){
-            float distance = (dif * 0.0343)/ 2;
+        if (xQueueReceive(xQueueTime, &time_start, pdMS_TO_TICKS(100))){
+            if (xQueueReceive(xQueueTime, &time_end, pdMS_TO_TICKS(100))){
+                if (time_end > time_start){
+                    int dif = time_end - time_start;
+                    float distance = (dif * 0.0343)/ 2;
 
-            if (distance > 400 || distance < 2){
-                distance = -1;
+                    if (distance > 400 || distance < 2){
+                        distance = -1;
+                    }
+                    xQueueSend(xQueueDistance, &distance, 0);
+                    xSemaphoreGive(xSemaphoreTrigger);
+                }
             }
-            xQueueSend(xQueueDistance, &distance, 0);
-            xSemaphoreGive(xSemaphoreTrigger);
         }
     }
     
